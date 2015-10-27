@@ -154,20 +154,22 @@ def user_find(client, user):
             return mongo_user
     return False
 
-def user_add(module, client, db_name, user, password, roles):
-    #pymono's user_add is a _create_or_update_user so we won't know if it was changed or updated
-    #without reproducing a lot of the logic in database.py of pymongo
-    db = client[db_name]
-    if roles is None:
-        db.add_user(user, password, False)
-    else:
-        try:
-            db.add_user(user, password, None, roles=roles)
-        except OperationFailure, e:
-            err_msg = str(e)
-            if LooseVersion(PyMongoVersion) <= LooseVersion('2.5'):
-                err_msg = err_msg + ' (Note: you must be on mongodb 2.4+ and pymongo 2.5+ to use the roles param)'
-            module.fail_json(msg=err_msg)
+
+def user_add(module, client, db_name, user, password, roles=None, kwargs=None):
+    """ Pymongo's user_add is a _create_or_update_user so we won't know if it was changed or updated
+        without reproducing a lot of the logic in database.py of pymongo.
+    """
+    try:
+        db = client[db_name]
+        roles = roles or []
+        kwargs = kwargs or {}
+        db.add_user(name=user, password=password, read_only=None,
+                    roles=roles, **kwargs)
+    except OperationFailure as e:
+        err_msg = str(e)
+        if LooseVersion(PyMongoVersion) <= LooseVersion('2.5'):
+            err_msg = err_msg + ' (Note: you must be on mongodb 2.4+ and pymongo 2.5+ to use the roles param)'
+        module.fail_json(msg=err_msg)
 
 def user_remove(module, client, db_name, user):
     exists = user_find(client, user)
