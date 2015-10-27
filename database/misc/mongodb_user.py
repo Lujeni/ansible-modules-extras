@@ -170,13 +170,25 @@ def user_add(module, client, db_name, user, password, roles=None, kwargs=None):
             err_msg = err_msg + ' (Note: you must be on mongodb 2.4+ and pymongo 2.5+ to use the roles param)'
         module.fail_json(msg=err_msg)
 
+
 def user_remove(module, client, db_name, user):
-    exists = user_find(client, user)
-    if exists:
-        db = client[db_name]
-        db.remove_user(user)
+    """ Remove the user name from the database specify in db_name.
+
+        Returns:
+            bool: True if successful found and removed, False otherwise.
+    """
+    try:
+        changed = False
+        exists = user_find(client, user)
+        if exists:
+            db = client[db_name]
+            db.remove_user(user)
+            changed = True
+    except Exception as e:
+        module.fail_json(msg="Unable to remove user %s : %s" % (user, e))
     else:
-        module.exit_json(changed=False, user=user)
+        return changed
+
 
 def load_mongocnf():
     config = ConfigParser.RawConfigParser()
@@ -234,6 +246,8 @@ def main():
     state = module.params['state']
     update_password = module.params['update_password']
 
+    changed = True
+
     try:
         if replica_set:
             client = MongoClient(login_host, int(login_port), replicaset=replica_set, ssl=ssl)
@@ -267,17 +281,18 @@ def main():
 
         try:
             user_add(module, client, db_name, user, password, roles)
-        except OperationFailure, e:
+        except OperationFailure as e:
             module.fail_json(msg='Unable to add or update user: %s' % str(e))
 
     elif state == 'absent':
         try:
-            user_remove(module, client, db_name, user)
-        except OperationFailure, e:
+            changed = user_remove(module, client, db_name, user)
+        except OperationFailure as e:
             module.fail_json(msg='Unable to remove user: %s' % str(e))
 
-    module.exit_json(changed=True, user=user)
+    module.exit_json(changed=changed, user=user)
 
-# import module snippets
+
 from ansible.module_utils.basic import *
-main()
+if __name__ == '__main__':
+    main()
