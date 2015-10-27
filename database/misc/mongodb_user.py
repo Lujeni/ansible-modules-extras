@@ -149,10 +149,8 @@ else:
 #
 
 def user_find(client, user):
-    for mongo_user in client["admin"].system.users.find():
-        if mongo_user['user'] == user:
-            return mongo_user
-    return False
+    return client["admin"].system.users.find_one({"user": user})
+
 
 def user_add(module, client, db_name, user, password, roles):
     #pymono's user_add is a _create_or_update_user so we won't know if it was changed or updated
@@ -279,4 +277,5 @@ def main():
 
 # import module snippets
 from ansible.module_utils.basic import *
-main()
+if __name__ == '__main__':
+    main()
