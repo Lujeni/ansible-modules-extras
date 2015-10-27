@@ -149,10 +149,9 @@ else:
 #
 
 def user_find(client, user):
-    for mongo_user in client["admin"].system.users.find():
-        if mongo_user['user'] == user:
-            return mongo_user
-    return False
+    """ Check if user name already exists.
+    """
+    return client["admin"].system.users.find_one({"user": user})
 
 
 def user_add(module, client, db_name, user, password, roles=None, kwargs=None):
