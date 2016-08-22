@@ -134,11 +134,11 @@ EXAMPLES = r"""
     marker: "<!-- {mark} ANSIBLE MANAGED BLOCK -->"
     content: ""
 
-- name: insert/update "Match User" configuation block in /etc/ssh/sshd_config
+- name: Add mappings to /etc/hosts
   blockinfile:
     dest: /etc/hosts
     block: |
-      {{item.name}} {{item.ip}}
+      {{item.ip}} {{item.name}}
     marker: "# {mark} ANSIBLE MANAGED BLOCK {{item.name}}"
   with_items:
       - { name: host1, ip: 10.10.1.10 }
@@ -169,7 +169,7 @@ def write_changes(module, contents, dest):
             module.fail_json(msg='failed to validate: '
                                  'rc:%s error:%s' % (rc, err))
     if valid:
-        module.atomic_move(tmpfile, dest)
+        module.atomic_move(tmpfile, dest, unsafe_writes=module.params['unsafe_writes'])
 
 
 def check_file_attrs(module, changed, message):
@@ -212,7 +212,8 @@ def main():
         module.fail_json(rc=256,
                          msg='Destination %s is a directory !' % dest)
 
-    if not os.path.exists(dest):
+    path_exists = os.path.exists(dest)
+    if not path_exists:
         if not module.boolean(params['create']):
             module.fail_json(rc=257,
                              msg='Destination %s does not exist !' % dest)
@@ -229,6 +230,9 @@ def main():
     block = params['block']
     marker = params['marker']
     present = params['state'] == 'present'
+
+    if not present and not path_exists:
+        module.exit_json(changed=False, msg="File not present")
 
     if insertbefore is None and insertafter is None:
         insertafter = 'EOF'
@@ -280,7 +284,9 @@ def main():
     lines[n0:n0] = blocklines
 
     if lines:
-        result = '\n'.join(lines)+'\n'
+        result = '\n'.join(lines)
+        if original and original.endswith('\n'):
+            result += '\n'
     else:
         result = ''
     if original == result:
@@ -297,9 +303,12 @@ def main():
         changed = True
 
     if changed and not module.check_mode:
-        if module.boolean(params['backup']) and os.path.exists(dest):
+        if module.boolean(params['backup']) and path_exists:
             module.backup_local(dest)
         write_changes(module, result, dest)
+
+    if module.check_mode and not path_exists:
+        module.exit_json(changed=changed, msg=msg)
 
     msg, changed = check_file_attrs(module, changed, msg)
     module.exit_json(changed=changed, msg=msg)

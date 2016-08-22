@@ -98,15 +98,7 @@ options:
         either a network mask or a plain number, specifying the number of 1's
         at the left side of the network mask. Thus, a mask of 24 is equivalent
         to 255.255.255.0. A "!" argument before the address specification
-        inverts the sense of the address.Source specification. Address can be
-        either a network name, a hostname, a network IP address (with /mask),
-        or a plain IP address.  Hostnames will be resolved once only, before
-        the rule is submitted to the kernel. Please note that specifying any
-        name to be resolved with a remote query such as DNS is a really bad
-        idea. The mask can be either a network mask or a plain number,
-        specifying the number of 1's at the left side of the network mask.
-        Thus, a mask of 24 is equivalent to 255.255.255.0. A "!" argument
-        before the address specification inverts the sense of the address.
+        inverts the sense of the address.
     required: false
     default: null
   destination:
@@ -119,15 +111,7 @@ options:
         either a network mask or a plain number, specifying the number of 1's
         at the left side of the network mask. Thus, a mask of 24 is equivalent
         to 255.255.255.0. A "!" argument before the address specification
-        inverts the sense of the address.Source specification. Address can be
-        either a network name, a hostname, a network IP address (with /mask),
-        or a plain IP address. Hostnames will be resolved once only, before
-        the rule is submitted to the kernel. Please note that specifying any
-        name to be resolved with a remote query such as DNS is a really bad
-        idea. The mask can be either a network mask or a plain number,
-        specifying the number of 1's at the left side of the network mask.
-        Thus, a mask of 24 is equivalent to 255.255.255.0. A "!" argument
-        before the address specification inverts the sense of the address.
+        inverts the sense of the address.
     required: false
     default: null
   match:
@@ -226,6 +210,13 @@ options:
         this, the destination address is never altered."
     required: false
     default: null
+  to_source:
+    version_added: "2.2"
+    description:
+      - "This specifies a source address to use with SNAT: without
+        this, the source address is never altered."
+    required: false
+    default: null
   set_dscp_mark:
     version_added: "2.1"
     description:
@@ -277,8 +268,8 @@ options:
   icmp_type:
     version_added: "2.2"
     description:
-      - "This allows specification of the ICMP type, which can be a numeric ICMP type, 
-        type/code pair, or one of the ICMP type names shown by the command 
+      - "This allows specification of the ICMP type, which can be a numeric ICMP type,
+        type/code pair, or one of the ICMP type names shown by the command
         'iptables -p icmp -h'"
     required: false
 '''
@@ -336,6 +327,7 @@ def construct_rule(params):
     append_param(rule, params['match'], '-m', True)
     append_param(rule, params['jump'], '-j', False)
     append_param(rule, params['to_destination'], '--to-destination', False)
+    append_param(rule, params['to_source'], '--to-source', False)
     append_param(rule, params['goto'], '-g', False)
     append_param(rule, params['in_interface'], '-i', False)
     append_param(rule, params['out_interface'], '-o', False)
@@ -401,6 +393,7 @@ def main():
             chain=dict(required=True, default=None, type='str'),
             protocol=dict(required=False, default=None, type='str'),
             source=dict(required=False, default=None, type='str'),
+            to_source=dict(required=False, default=None, type='str'),
             destination=dict(required=False, default=None, type='str'),
             to_destination=dict(required=False, default=None, type='str'),
             match=dict(required=False, default=[], type='list'),
