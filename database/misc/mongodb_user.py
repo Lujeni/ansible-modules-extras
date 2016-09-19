@@ -155,8 +155,6 @@ import ssl as ssl_lib
 import ConfigParser
 from distutils.version import LooseVersion
 try:
-    from pymongo.errors import ConnectionFailure
-    from pymongo.errors import OperationFailure
     from pymongo import version as PyMongoVersion
     from pymongo import MongoClient
 except ImportError:
@@ -350,7 +348,7 @@ def main():
                 module.fail_json(msg='The localhost login exception only allows the first admin account to be created')
             #else: this has to be the first admin user added
 
-    except ConnectionFailure, e:
+    except Exception, e:
         module.fail_json(msg='unable to connect to database: %s' % str(e))
 
     check_compatibility(module, client)
@@ -370,7 +368,7 @@ def main():
                 module.exit_json(changed=True, user=user)
 
             user_add(module, client, db_name, user, password, roles)
-        except OperationFailure, e:
+        except Exception, e:
             module.fail_json(msg='Unable to add or update user: %s' % str(e))
 
             # Here we can  check password change if mongo provide a query for that : https://jira.mongodb.org/browse/SERVER-22848
@@ -381,7 +379,7 @@ def main():
     elif state == 'absent':
         try:
             user_remove(module, client, db_name, user)
-        except OperationFailure, e:
+        except Exception, e:
             module.fail_json(msg='Unable to remove user: %s' % str(e))
 
     module.exit_json(changed=True, user=user)
